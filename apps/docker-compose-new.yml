@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,6 +14,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - smarthome-network
+
+  devices-api:
+    build:
+      context: ./devices/DevicesAPI/DevicesAPI
+      dockerfile: Dockerfile
+    container_name: devices-api
+    environment:
+      - ConnectionStrings__default=Host=postgres;Port=5432;Database=smarthome;Username=postgres;Password=postgres
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  telemetry-api:
+    build:
+      context: ./telemetry
+      dockerfile: Dockerfile
+    container_name: telemetry-api
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
     networks:
       - smarthome-network
 
@@ -42,6 +64,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
       - TEMPERATURE_API_URL=http://temperature-api:8081
+      - DEVICE_API_URL=http://devices-api:8080
     ports:
       - "8080:8080"
     restart: unless-stopped

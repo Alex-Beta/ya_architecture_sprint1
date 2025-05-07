@@ -1,0 +1,25 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+System_Boundary(s1, "MessageProcessor (компонент)") {
+
+    Component(receiveFunc, "ReceiveMessage", "Получает и валидирует входящее сообщение")
+    Component(storeFunc, "StoreMessage", "Сохраняет сообщение в базу данных")
+    Component(checkTriggers, "CheckTriggers", "Проверяет, срабатывает ли какой-либо триггер")
+    Component(triggerRules, "TriggerRules", "Хранит логику условий срабатывания")
+    Component(executeAction, "ExecuteAction", "Запускает соответствующее действие")
+    Component(logger, "Logger", "Пишет логирование для отладки и аудита")
+}
+
+' Взаимодействия
+Rel(receiveFunc, storeFunc, "Сохраняет сообщение")
+Rel(receiveFunc, checkTriggers, "Передаёт сообщение для анализа")
+Rel(checkTriggers, triggerRules, "Вызывает")
+Rel(checkTriggers, executeAction, "Если триггер сработал, вызывает")
+Rel(executeAction, logger, "Логирует действие")
+Rel(storeFunc, logger, "Логирует сохранение")
+Rel(receiveFunc, logger, "Логирует входящее сообщение")
+
+@enduml

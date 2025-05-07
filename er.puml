@@ -1,0 +1,45 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+
+entity User{
+ id: integer <<key>>
+ --
+ name string
+ email string
+
+}
+entity House{
+ id: integer <<key>>
+ --
+ address: string
+ user_id: integer
+}
+House::user_id --> User::id
+
+entity Device {
+ id: integer <<key>>
+ --
+ type_id: integer
+ house_id: integer
+ serial_number: string
+ status: bool <<nullable>>
+}
+Device::house_id --> House::id
+
+entity DeviceType{
+ id: integer <<key>>
+ --
+ name: string
+}
+Device::type_id --> DeviceType::id
+
+entity TelemetryData{
+ device_id: integer <<key>>
+ timestamp: datetime <<key>>
+ --
+ message: json
+}
+TelemetryData::device_id --> Device::id
+
+@enduml
