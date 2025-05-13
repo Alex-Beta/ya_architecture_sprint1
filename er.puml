@@ -2,20 +2,28 @@
 !includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 
-entity User{
+entity User {
  id: integer <<key>>
  --
- name string
- email string
-
+ name: string
+ email: string
 }
-entity House{
+
+entity House {
  id: integer <<key>>
  --
  address: string
- user_id: integer
 }
-House::user_id --> User::id
+
+entity UserHouse {
+ user_id: integer <<key>>
+ house_id: integer <<key>>
+ --
+ role: string  // опционально, например: 'owner', 'tenant'
+}
+
+UserHouse::user_id --> User::id
+UserHouse::house_id --> House::id
 
 entity Device {
  id: integer <<key>>
