@@ -1,0 +1,114 @@
+openapi: 3.0.0
+info:
+  title: Device API
+  version: 1.0.0
+  description: API для взаимодействия с устройствами
+
+paths:
+  /device/{deviceId}:
+    get:
+      summary: Получение информации об устройстве
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Уникальный идентификатор устройства
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Информация об устройстве
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Устройство не найдено
+
+  /device/{deviceId}/state:
+    put:
+      summary: Обновление состояния устройства
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Уникальный идентификатор устройства
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceState'
+      responses:
+        '200':
+          description: Состояние обновлено
+        '400':
+          description: Некорректные данные
+        '404':
+          description: Устройство не найдено
+
+  /device/{deviceId}/command:
+    post:
+      summary: Отправка команды устройству
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Уникальный идентификатор устройства
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Command'
+      responses:
+        '200':
+          description: Команда успешно отправлена
+        '400':
+          description: Ошибка в команде
+        '404':
+          description: Устройство не найдено
+
+components:
+  schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [online, offline, unknown]
+        lastSeen:
+          type: string
+          format: date-time
+
+    DeviceState:
+      type: object
+      properties:
+        power:
+          type: boolean
+        mode:
+          type: string
+        temperature:
+          type: number
+          format: float
+      required: [power]
+
+    Command:
+      type: object
+      properties:
+        command:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+      required: [command]

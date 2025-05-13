@@ -18,13 +18,15 @@ import (
 type SensorHandler struct {
 	DB                 *db.DB
 	TemperatureService *services.TemperatureService
+	DeviceService      *services.DeviceService
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, deviceService *services.DeviceService) *SensorHandler {
 	return &SensorHandler{
 		DB:                 db,
 		TemperatureService: temperatureService,
+		DeviceService:      deviceService,
 	}
 }
 
@@ -44,24 +46,38 @@ func (h *SensorHandler) RegisterRoutes(router *gin.RouterGroup) {
 
 // GetSensors handles GET /api/v1/sensors
 func (h *SensorHandler) GetSensors(c *gin.Context) {
-	sensors, err := h.DB.GetSensors(context.Background())
+	// Получаем список сенсоров из внешнего API
+	deviceSensors, err := h.DeviceService.GetSensors()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("ошибка получения сенсоров: %v", err)})
 		return
 	}
 
-	// Update temperature sensors with real-time data from the external API
-	for i, sensor := range sensors {
-		if sensor.Type == models.Temperature {
-			tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", sensor.ID))
+	// Преобразуем ответ в формат нашего API
+	sensors := make([]models.Sensor, len(deviceSensors))
+	for i, devSensor := range deviceSensors {
+		sensors[i] = models.Sensor{
+			ID:          devSensor.Id,
+			Type:        models.SensorType(devSensor.SensorType),
+			Location:    devSensor.Location,
+			Value:       devSensor.Value,
+			Unit:        devSensor.Unit,
+			Status:      devSensor.Status,
+			Name:        devSensor.Name,
+			LastUpdated: devSensor.LastUpdated,
+			CreatedAt:   devSensor.CreatedAt,
+		}
+
+		// Если это температурный сенсор, обновляем данные из температурного сервиса
+		if sensors[i].Type == models.Temperature {
+			tempData, err := h.TemperatureService.GetTemperatureByID(fmt.Sprintf("%d", sensors[i].ID))
 			if err == nil {
-				// Update sensor with real-time data
 				sensors[i].Value = tempData.Value
 				sensors[i].Status = tempData.Status
 				sensors[i].LastUpdated = tempData.Timestamp
-				log.Printf("Updated temperature data for sensor %d from external API", sensor.ID)
+				log.Printf("Updated temperature data for sensor %d from external API", sensors[i].ID)
 			} else {
-				log.Printf("Failed to fetch temperature data for sensor %d: %v", sensor.ID, err)
+				log.Printf("Failed to fetch temperature data for sensor %d: %v", sensors[i].ID, err)
 			}
 		}
 	}
@@ -135,14 +151,36 @@ func (h *SensorHandler) CreateSensor(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	sensor, err := h.DB.CreateSensor(context.Background(), sensorCreate)
+	// Вызываем внешнее API
+	deviceResp, err := h.DeviceService.CreateSensor(&sensorCreate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("ошибка создания сенсора: %v", err)})
 		return
 	}
 
+	// Преобразуем ответ от внешнего API в формат нашего API
+	sensor := &models.Sensor{
+		ID:          deviceResp.Id,
+		Type:        models.SensorType(deviceResp.SensorType),
+		Location:    deviceResp.Location,
+		Value:       deviceResp.Value,
+		Unit:        deviceResp.Unit,
+		Status:      deviceResp.Status,
+		Name:        deviceResp.Name,
+		LastUpdated: deviceResp.LastUpdated,
+		CreatedAt:   deviceResp.CreatedAt,
+	}
+
 	c.JSON(http.StatusCreated, sensor)
+
+	//sensor, err := h.DB.CreateSensor(context.Background(), sensorCreate)
+	//
+	//if err != nil {
+	//	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	//	return
+	//}
+	//
+	//c.JSON(http.StatusCreated, sensor)
 }
 
 // UpdateSensor handles PUT /api/v1/sensors/:id
